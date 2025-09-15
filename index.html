@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Saved Bookmarks</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+        /* ... existing styles ... */
+        body {
+            font-family: sans-serif;
+            margin: 2rem;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 2rem;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        input[type="text"], input[type="url"] {
+            width: 95%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        #searchInput {
+            flex-grow: 1;
+            margin-bottom: 0;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        /* NEW: Style for disabled buttons */
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        /* NEW: Container for undo/redo buttons */
+        .history-controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        /* NEW: Specific style for history buttons */
+        .history-controls button {
+            background-color: #6c757d;
+        }
+        .history-controls button:hover:not(:disabled) {
+            background-color: #5a6268;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #eee;
+            margin-top: 5px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        a {
+            text-decoration: none;
+            color: #007BFF;
+            word-break: break-all;
+            margin-right: 10px;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+            padding: 5px 10px;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+
+        #addButton {
+            background-color: #097969;
+        }
+
+        #undoButton {
+            background-color: #3E1E68;
+        }
+
+        #redoButton {
+            background-color: #E45A92;
+        }
+
+        #searchButton {
+            background-color: #E49B0F;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>My Bookmarks</h1>
+
+        <div class="history-controls">
+            <button type="button" id="undoButton" disabled>Undo (↺)</button>
+            <button type="button" id="redoButton" disabled>Redo (↻)</button>
+        </div>
+
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search bookmarks...">
+            <button type="button" id="searchButton">Search</button>
+        </div>
+
+        <form id="bookmarkForm">
+            <input type="url" id="websiteUrl" placeholder="Enter website URL" required>
+            <br>
+            <input type="text" id="websiteName" placeholder="Enter website name" required>
+            <br>
+            <button type="submit" id="addButton">Add Bookmark</button>
+        </form>
+        <ul id="bookmarkList"></ul>
+    </div>
+
+    <script>
+        // DOM Elements
+        const form = document.getElementById('bookmarkForm');
+        const bookmarkList = document.getElementById('bookmarkList');
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const undoButton = document.getElementById('undoButton');
+        const redoButton = document.getElementById('redoButton');
+
+        // Main application state
+        let bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+
+        // --- NEW: History management for Undo/Redo ---
+        // We store snapshots of the bookmarks array.
+        let history = [JSON.parse(JSON.stringify(bookmarks))]; // Start with the initial state
+        let historyIndex = 0; // A pointer to our current position in the history
+
+        function updateUndoRedoButtons() {
+            undoButton.disabled = historyIndex === 0;
+            redoButton.disabled = historyIndex >= history.length - 1;
+        }
+
+        function saveState() {
+            // When a new action is taken, we discard any "redo" history.
+            history = history.slice(0, historyIndex + 1);
+
+            // Add a deep copy of the current state to the history.
+            history.push(JSON.parse(JSON.stringify(bookmarks)));
+            historyIndex++;
+            updateUndoRedoButtons();
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                // Load the previous state from history
+                bookmarks = JSON.parse(JSON.stringify(history[historyIndex]));
+                saveBookmarks();
+                displayBookmarks();
+                updateUndoRedoButtons();
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                // Load the next state from history
+                bookmarks = JSON.parse(JSON.stringify(history[historyIndex]));
+                saveBookmarks();
+                displayBookmarks();
+                updateUndoRedoButtons();
+            }
+        }
+        // --- End of History management ---
+
+        function saveBookmarks() {
+            localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+        }
+        
+        function renderBookmarks(bookmarksToRender) {
+            bookmarkList.innerHTML = '';
+            bookmarksToRender.forEach(function(bookmark) {
+                const originalIndex = bookmarks.findIndex(b => b.url === bookmark.url && b.name === bookmark.name);
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = bookmark.url;
+                link.textContent = bookmark.name;
+                link.target = "_blank";
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.classList.add('delete-btn');
+                deleteButton.setAttribute('data-index', originalIndex);
+                listItem.appendChild(link);
+                listItem.appendChild(deleteButton);
+                bookmarkList.appendChild(listItem);
+            });
+        }
+
+        function displayBookmarks() {
+            const searchTerm = searchInput.value.toLowerCase();
+            if (searchTerm) {
+                const filteredBookmarks = bookmarks.filter(bookmark =>
+                    bookmark.name.toLowerCase().includes(searchTerm) ||
+                    bookmark.url.toLowerCase().includes(searchTerm)
+                );
+                renderBookmarks(filteredBookmarks);
+            } else {
+                renderBookmarks(bookmarks);
+            }
+        }
+        
+        // Event Listeners
+        searchButton.addEventListener('click', displayBookmarks);
+        searchInput.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') displayBookmarks();
+        });
+        
+        // NEW: Listen for clicks on undo and redo buttons
+        undoButton.addEventListener('click', undo);
+        redoButton.addEventListener('click', redo);
+
+        bookmarkList.addEventListener('click', function(event) {
+            if (event.target.classList.contains('delete-btn')) {
+                const indexToDelete = parseInt(event.target.getAttribute('data-index'));
+                bookmarks.splice(indexToDelete, 1);
+                
+                // MODIFIED: Save state for undo/redo
+                saveState();
+                saveBookmarks();
+                displayBookmarks();
+            }
+        });
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const urlInput = document.getElementById('websiteUrl');
+            const nameInput = document.getElementById('websiteName');
+            const newBookmark = { name: nameInput.value, url: urlInput.value };
+            bookmarks.push(newBookmark);
+            
+            // MODIFIED: Save state for undo/redo
+            saveState();
+            saveBookmarks();
+            displayBookmarks();
+            form.reset();
+        });
+
+        // Initial render on page load
+        displayBookmarks();
+        updateUndoRedoButtons();
+    </script>
+
+</body>
+</html>

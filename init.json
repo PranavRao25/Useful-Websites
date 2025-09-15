@@ -1,0 +1,19 @@
+[
+    { "name": "GEOG 585: Open Web Mapping by Penn State", "url": "https://www.e-education.psu.edu/geog585/" },
+    { "name": "Open Source Geospatial Laboratory at ETHZ", "url": "https://osgl.ethz.ch/training/webmaps/" },
+    { "name": "NCSU GeoForAll Lab", "url": "https://geospatial.ncsu.edu/geoforall/courses.html" },
+    { "name": "OpenRefine", "url": "https://openrefine.org/" },
+    { "name": "GloVis", "url": "https://glovis.usgs.gov/app" },
+    { "name": "Introduction to Python GIS CSC", "url": "https://automating-gis-processes.github.io/CSC/" },
+    { "name": "Python GIS Foundations - Spatial Thoughts", "url": "https://courses.spatialthoughts.com/python-foundation.html" },
+    { "name": "Shapely", "url": "https://shapely.readthedocs.io/en/latest/manual.html" },
+    { "name": "PyProj", "url": "https://pyproj4.github.io/pyproj/stable/index.html" },
+    { "name": "GDAL", "url": "https://gdal.org/en/stable/" },
+    { "name": "Fiona", "url": "https://pypi.org/project/fiona/" },
+    { "name": "Geo-Python", "url": "https://geo-python-site.readthedocs.io/en/latest/#" },
+    { "name": "Automating GIS Processes 2025", "url": "https://autogis-site.readthedocs.io/en/latest/" },
+    { "name": "WGS 84", "url": "https://en.wikipedia.org/wiki/World_Geodetic_System" },
+    { "name": "Vincenty\"s formulae", "url": "https://en.wikipedia.org/wiki/Vincenty%27s_formulae" },
+    { "name": "OSGeo", "url": "https://www.osgeo.org/" },
+    { "name": "Spatial Thoughts", "url": "https://spatialthoughts.com/" }
+]
