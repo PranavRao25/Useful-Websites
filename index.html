@@ -5,7 +5,6 @@
     <title>My Saved Bookmarks</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
-        /* ... existing styles ... */
         body {
             font-family: sans-serif;
             margin: 2rem;
@@ -21,6 +20,68 @@
             background: #fff;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+            align-items: center; /* Vertically align items */
+        }
+        .tab-btn {
+            position: relative; /* Needed for the delete button */
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            font-size: 16px;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            color: #5F9EA0;
+            padding-right: 30px; /* Make space for delete 'x' */
+        }
+        .tab-btn.active {
+            color: #007BFF;
+            border-bottom-color: #007BFF;
+            font-weight: bold;
+        }
+        /* NEW: Style for the 'add new tab' button */
+        #addTabBtn {
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            border: none;
+            background-color: #28a745;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 10px;
+            line-height: 24px; /* Center the '+' sign */
+            padding: 0;
+        }
+        #addTabBtn:hover {
+            background-color: #218838;
+        }
+        /* NEW: Style for the delete icon on tabs */
+        .tab-btn .delete-tab-btn {
+            position: absolute;
+            top: 50%;
+            right: 5px;
+            transform: translateY(-50%);
+            font-size: 14px;
+            font-weight: bold;
+            color: #aaa;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px 5px;
+            display: none; /* Hidden by default */
+        }
+        .tab-btn:hover .delete-tab-btn {
+            display: inline; /* Show on hover */
+        }
+        .delete-tab-btn:hover {
+            color: #dc3545;
         }
         input[type="text"], input[type="url"] {
             width: 95%;
@@ -49,28 +110,16 @@
         button:hover {
             background-color: #0056b3;
         }
-        /* NEW: Style for disabled buttons */
         button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
         }
-        /* NEW: Container for undo/redo buttons */
         .history-controls {
             margin-bottom: 20px;
             display: flex;
             gap: 10px;
         }
-        /* NEW: Specific style for history buttons */
-        .history-controls button {
-            background-color: #6c757d;
-        }
-        .history-controls button:hover:not(:disabled) {
-            background-color: #5a6268;
-        }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
+        ul { list-style-type: none; padding: 0; }
         li {
             display: flex;
             justify-content: space-between;
@@ -86,37 +135,21 @@
             word-break: break-all;
             margin-right: 10px;
         }
-        .delete-btn {
-            background-color: #dc3545;
-            padding: 5px 10px;
-            font-size: 12px;
-            flex-shrink: 0;
-        }
-        .delete-btn:hover {
-            background-color: #c82333;
-        }
-
-        #addButton {
-            background-color: #097969;
-        }
-
-        #undoButton {
-            background-color: #3E1E68;
-        }
-
-        #redoButton {
-            background-color: #E45A92;
-        }
-
-        #searchButton {
-            background-color: #E49B0F;
-        }
+        .delete-btn { background-color: #dc3545; padding: 5px 10px; font-size: 12px; }
+        .delete-btn:hover { background-color: #c82333; }
+        #addButton { background-color: #097969; }
+        #undoButton { background-color: #3E1E68; }
+        #redoButton { background-color: #E45A92; }
+        #searchButton { background-color: #E49B0F; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>My Bookmarks</h1>
+        <div class="tabs">
+            </div>
+        
+        <h1 id="pageTitle">My Bookmarks</h1>
 
         <div class="history-controls">
             <button type="button" id="undoButton" disabled>Undo (↺)</button>
@@ -139,114 +172,224 @@
     </div>
 
     <script>
-        // DOM Elements
         const form = document.getElementById('bookmarkForm');
         const bookmarkList = document.getElementById('bookmarkList');
         const searchInput = document.getElementById('searchInput');
-        const searchButton = document.getElementById('searchButton');
-        const undoButton = document.getElementById('undoButton');
-        const redoButton = document.getElementById('redoButton');
+        const tabsContainer = document.querySelector('.tabs');
+        const pageTitle = document.getElementById('pageTitle');
 
-        // Main application state
-        let bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+        const geoSpatialBookmarks = [
+            { "name": "GEOG 585: Open Web Mapping by Penn State", "url": "https://www.e-education.psu.edu/geog585/" },
+            { "name": "Open Source Geospatial Laboratory at ETHZ", "url": "https://osgl.ethz.ch/training/webmaps/" },
+            { "name": "NCSU GeoForAll Lab", "url": "https://geospatial.ncsu.edu/geoforall/courses.html" },
+            { "name": "OpenRefine", "url": "https://openrefine.org/" },
+            { "name": "GloVis", "url": "https://glovis.usgs.gov/app" },
+            { "name": "Introduction to Python GIS CSC", "url": "https://automating-gis-processes.github.io/CSC/" },
+            { "name": "Python GIS Foundations - Spatial Thoughts", "url": "https://courses.spatialthoughts.com/python-foundation.html" },
+            { "name": "Shapely", "url": "https://shapely.readthedocs.io/en/latest/manual.html" },
+            { "name": "PyProj", "url": "https://pyproj4.github.io/pyproj/stable/index.html" },
+            { "name": "GDAL", "url": "https://gdal.org/en/stable/" },
+            { "name": "Fiona", "url": "https://pypi.org/project/fiona/" },
+            { "name": "Geo-Python", "url": "https://geo-python-site.readthedocs.io/en/latest/#" },
+            { "name": "Automating GIS Processes 2025", "url": "https://autogis-site.readthedocs.io/en/latest/" },
+            { "name": "WGS 84", "url": "https://en.wikipedia.org/wiki/World_Geodetic_System" },
+            { "name": "Vincenty's formulae", "url": "https://en.wikipedia.org/wiki/Vincenty%27s_formulae" },
+            { "name": "OSGeo", "url": "https://www.osgeo.org/" },
+            { "name": "Spatial Thoughts", "url": "https://spatialthoughts.com/" }
+        ];
 
-        // --- NEW: History management for Undo/Redo ---
-        // We store snapshots of the bookmarks array.
-        let history = [JSON.parse(JSON.stringify(bookmarks))]; // Start with the initial state
-        let historyIndex = 0; // A pointer to our current position in the history
+        let tabs, currentPage, allBookmarks, allHistories, historyIndices;
 
+        function initializeApp() {
+            tabs = JSON.parse(localStorage.getItem('bookmarkTabs')) || ['General'];
+            currentPage = localStorage.getItem('bookmarkCurrentPage') || tabs[0];
+            allBookmarks = JSON.parse(localStorage.getItem('allBookmarks')) || {};
+            allHistories = JSON.parse(localStorage.getItem('allHistories')) || {};
+            historyIndices = JSON.parse(localStorage.getItem('historyIndices')) || {};
+
+            if (!tabs.includes('GeoSpatial')) {
+                tabs.push('GeoSpatial');
+                allBookmarks['GeoSpatial'] = geoSpatialBookmarks;
+                allHistories['GeoSpatial'] = [JSON.parse(JSON.stringify(geoSpatialBookmarks))];
+                historyIndices['GeoSpatial'] = 0;
+                saveAllData();
+            }
+            
+            initializeStateForTabs();
+            renderTabs();
+            displayBookmarks();
+            updateUndoRedoButtons();
+        }
+
+        function initializeStateForTabs() {
+            tabs.forEach(tab => {
+                if (!allBookmarks[tab]) allBookmarks[tab] = [];
+                if (!allHistories[tab]) allHistories[tab] = [[]];
+                if (historyIndices[tab] === undefined) historyIndices[tab] = 0;
+            });
+        }
+
+        function renderTabs() {
+            tabsContainer.innerHTML = '';
+            tabs.forEach(tabName => {
+                const tabButton = document.createElement('button');
+                tabButton.className = 'tab-btn';
+                tabButton.textContent = tabName;
+                tabButton.setAttribute('data-page', tabName);
+                if (tabName === currentPage) {
+                    tabButton.classList.add('active');
+                }
+                if (tabName !== 'General') {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-tab-btn';
+                    deleteBtn.innerHTML = '&times;';
+                    deleteBtn.setAttribute('data-page', tabName);
+                    deleteBtn.title = `Delete ${tabName} tab`;
+                    tabButton.appendChild(deleteBtn);
+                }
+                tabsContainer.appendChild(tabButton);
+            });
+            const addTabButton = document.createElement('button');
+            addTabButton.id = 'addTabBtn';
+            addTabButton.textContent = '+';
+            addTabButton.title = 'Add new tab';
+            tabsContainer.appendChild(addTabButton);
+        }
+        
         function updateUndoRedoButtons() {
-            undoButton.disabled = historyIndex === 0;
-            redoButton.disabled = historyIndex >= history.length - 1;
+            const index = historyIndices[currentPage] || 0;
+            const history = allHistories[currentPage] || [[]];
+            document.getElementById('undoButton').disabled = index <= 0;
+            document.getElementById('redoButton').disabled = index >= history.length - 1;
         }
 
         function saveState() {
-            // When a new action is taken, we discard any "redo" history.
-            history = history.slice(0, historyIndex + 1);
-
-            // Add a deep copy of the current state to the history.
-            history.push(JSON.parse(JSON.stringify(bookmarks)));
-            historyIndex++;
+            let currentHistory = allHistories[currentPage];
+            let currentIndex = historyIndices[currentPage];
+            currentHistory = currentHistory.slice(0, currentIndex + 1);
+            currentHistory.push(JSON.parse(JSON.stringify(allBookmarks[currentPage])));
+            currentIndex++;
+            allHistories[currentPage] = currentHistory;
+            historyIndices[currentPage] = currentIndex;
             updateUndoRedoButtons();
         }
 
         function undo() {
-            if (historyIndex > 0) {
-                historyIndex--;
-                // Load the previous state from history
-                bookmarks = JSON.parse(JSON.stringify(history[historyIndex]));
-                saveBookmarks();
+            let currentIndex = historyIndices[currentPage];
+            if (currentIndex > 0) {
+                currentIndex--;
+                allBookmarks[currentPage] = JSON.parse(JSON.stringify(allHistories[currentPage][currentIndex]));
+                historyIndices[currentPage] = currentIndex;
+                saveAllData();
                 displayBookmarks();
                 updateUndoRedoButtons();
             }
         }
 
         function redo() {
-            if (historyIndex < history.length - 1) {
-                historyIndex++;
-                // Load the next state from history
-                bookmarks = JSON.parse(JSON.stringify(history[historyIndex]));
-                saveBookmarks();
+            let currentIndex = historyIndices[currentPage];
+            let currentHistory = allHistories[currentPage];
+            if (currentIndex < currentHistory.length - 1) {
+                currentIndex++;
+                allBookmarks[currentPage] = JSON.parse(JSON.stringify(allHistories[currentPage][currentIndex]));
+                historyIndices[currentPage] = currentIndex;
+                saveAllData();
                 displayBookmarks();
                 updateUndoRedoButtons();
             }
         }
-        // --- End of History management ---
-
-        function saveBookmarks() {
-            localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+        
+        function saveAllData() {
+            localStorage.setItem('bookmarkTabs', JSON.stringify(tabs));
+            localStorage.setItem('bookmarkCurrentPage', currentPage);
+            localStorage.setItem('allBookmarks', JSON.stringify(allBookmarks));
+            localStorage.setItem('allHistories', JSON.stringify(allHistories));
+            localStorage.setItem('historyIndices', JSON.stringify(historyIndices));
         }
         
         function renderBookmarks(bookmarksToRender) {
             bookmarkList.innerHTML = '';
-            bookmarksToRender.forEach(function(bookmark) {
-                const originalIndex = bookmarks.findIndex(b => b.url === bookmark.url && b.name === bookmark.name);
-                const listItem = document.createElement('li');
-                const link = document.createElement('a');
-                link.href = bookmark.url;
-                link.textContent = bookmark.name;
-                link.target = "_blank";
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = 'Delete';
-                deleteButton.classList.add('delete-btn');
-                deleteButton.setAttribute('data-index', originalIndex);
-                listItem.appendChild(link);
-                listItem.appendChild(deleteButton);
-                bookmarkList.appendChild(listItem);
+            const currentBookmarks = allBookmarks[currentPage];
+            bookmarksToRender.forEach(bookmark => {
+                const originalIndex = currentBookmarks.findIndex(b => b.url === bookmark.url && b.name === bookmark.name);
+                if (originalIndex === -1) return;
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <a href="${bookmark.url}" target="_blank">${bookmark.name}</a>
+                    <button class="delete-btn" data-index="${originalIndex}">Delete</button>
+                `;
+                bookmarkList.appendChild(li);
             });
         }
 
         function displayBookmarks() {
             const searchTerm = searchInput.value.toLowerCase();
+            const currentBookmarks = allBookmarks[currentPage] || [];
+            pageTitle.textContent = `${currentPage} Bookmarks`;
+
             if (searchTerm) {
-                const filteredBookmarks = bookmarks.filter(bookmark =>
-                    bookmark.name.toLowerCase().includes(searchTerm) ||
-                    bookmark.url.toLowerCase().includes(searchTerm)
+                const filteredBookmarks = currentBookmarks.filter(b =>
+                    b.name.toLowerCase().includes(searchTerm) || b.url.toLowerCase().includes(searchTerm)
                 );
                 renderBookmarks(filteredBookmarks);
             } else {
-                renderBookmarks(bookmarks);
+                renderBookmarks(currentBookmarks);
             }
         }
         
-        // Event Listeners
-        searchButton.addEventListener('click', displayBookmarks);
-        searchInput.addEventListener('keyup', (event) => {
-            if (event.key === 'Enter') displayBookmarks();
+        document.getElementById('searchButton').addEventListener('click', displayBookmarks);
+        searchInput.addEventListener('keyup', (e) => e.key === 'Enter' && displayBookmarks());
+        document.getElementById('undoButton').addEventListener('click', undo);
+        document.getElementById('redoButton').addEventListener('click', redo);
+
+        tabsContainer.addEventListener('click', function(event) {
+            const target = event.target;
+            
+            if (target.id === 'addTabBtn') {
+                const newTabName = prompt("Enter a name for the new tab:");
+                if (newTabName && !tabs.includes(newTabName)) {
+                    tabs.push(newTabName);
+                    currentPage = newTabName;
+                    initializeStateForTabs();
+                    saveAllData();
+                    renderTabs();
+                    displayBookmarks();
+                    updateUndoRedoButtons();
+                } else if (tabs.includes(newTabName)) {
+                    alert("A tab with this name already exists.");
+                }
+            }
+
+            if (target.classList.contains('delete-tab-btn')) {
+                const tabToDelete = target.getAttribute('data-page');
+                if (confirm(`Are you sure you want to delete the "${tabToDelete}" tab and all its bookmarks?`)) {
+                    tabs = tabs.filter(t => t !== tabToDelete);
+                    delete allBookmarks[tabToDelete];
+                    delete allHistories[tabToDelete];
+                    delete historyIndices[tabToDelete];
+                    currentPage = tabs[0];
+                    saveAllData();
+                    renderTabs();
+                    displayBookmarks();
+                    updateUndoRedoButtons();
+                }
+            }
+
+            if (target.classList.contains('tab-btn')) {
+                currentPage = target.getAttribute('data-page');
+                localStorage.setItem('bookmarkCurrentPage', currentPage);
+                renderTabs();
+                displayBookmarks();
+                updateUndoRedoButtons();
+            }
         });
-        
-        // NEW: Listen for clicks on undo and redo buttons
-        undoButton.addEventListener('click', undo);
-        redoButton.addEventListener('click', redo);
 
         bookmarkList.addEventListener('click', function(event) {
             if (event.target.classList.contains('delete-btn')) {
                 const indexToDelete = parseInt(event.target.getAttribute('data-index'));
-                bookmarks.splice(indexToDelete, 1);
-                
-                // MODIFIED: Save state for undo/redo
+                allBookmarks[currentPage].splice(indexToDelete, 1);
                 saveState();
-                saveBookmarks();
+                saveAllData();
                 displayBookmarks();
             }
         });
@@ -256,19 +399,14 @@
             const urlInput = document.getElementById('websiteUrl');
             const nameInput = document.getElementById('websiteName');
             const newBookmark = { name: nameInput.value, url: urlInput.value };
-            bookmarks.push(newBookmark);
-            
-            // MODIFIED: Save state for undo/redo
+            allBookmarks[currentPage].push(newBookmark);
             saveState();
-            saveBookmarks();
+            saveAllData();
             displayBookmarks();
             form.reset();
         });
 
-        // Initial render on page load
-        displayBookmarks();
-        updateUndoRedoButtons();
+        initializeApp();
     </script>
-
 </body>
 </html>
